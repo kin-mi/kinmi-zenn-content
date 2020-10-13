@@ -35,7 +35,7 @@ FirebaseSDK に含まれるテスト用SDK。
 
 2. [Jest](https://jestjs.io/) (ver 26.4.2)
 [世界で最も使われているJSテストフレームワーク](https://ashleynolan.co.uk/blog/frontend-tooling-survey-2019-results#js-testing)の1つ。Facebook製。
-Node.js上で[JSDOM](https://github.com/jsdom/jsdom)というブラウザのエミュレーション環境を用いてテストが実行される。
+実ブラウザは使わず、Nodeサーバー上で[JSDOM](https://github.com/jsdom/jsdom)というブラウザのエミュレーション環境を用いてテストが実行される。
 Jestのお作法は下記の記事が参考になる。
   [Facebook製のJavaScriptテストツール「Jest」の逆引き使用例](https://qiita.com/chimame/items/e97883fd46b67529d59)
 
