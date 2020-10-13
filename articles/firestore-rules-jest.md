@@ -31,7 +31,7 @@ Java8+ が必要なことに注意。未導入の場合は下記からインス�
 ## 導入するライブラリ
 1. [@firebase/rules-unit-testing](https://firebase.google.com/docs/firestore/security/test-rules-emulator) (ver 1.0.4)
 FirebaseSDK に含まれるテスト用SDK。
-2020/08 からパッケージ名称が`@firebase/testing`から`@firebase/rules-unit-testing`に変更されている。
+2020/08 にパッケージ名称が `@firebase/testing` から `@firebase/rules-unit-testing` へ変更されている。
 
 2. [Jest](https://jestjs.io/) (ver 26.4.2)
 [世界で最も使われているJSテストフレームワーク](https://ashleynolan.co.uk/blog/frontend-tooling-survey-2019-results#js-testing)の1つ。Facebook製。
