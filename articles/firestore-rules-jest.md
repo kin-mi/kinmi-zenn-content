@@ -3,7 +3,7 @@ title: "Firestore RulesのテストをJestで書くテスト"
 emoji: "🔥"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["firebase", "firestore", "javascript", "jest"]
-published: false
+published: true
 ---
 # 結論
 Jest使うのはやめた方が良さそう(拘りが無い限り)
@@ -43,13 +43,13 @@ Jestのお作法は下記の記事が参考になる。
 `yarn add --dev @firebase/rules-unit-testing jest`
 
 ## エミュレーターの準備
-プロジェクト直下で `firebase init` を実行。
+次に `firebase init` を実行。
 > ? Which Firebase CLI features do you want to set up for this folder? Press Space to select features, then Enter to confirm your choices.
 
 と聞かれるので `Emulators` を選択。
 この時、まだfirestoreをinitしていないなら一緒にセットアップする。
 （プロジェクト直下に `firestore.rules` が存在しない場合）
-既にFirestoreコンソールでRulesを開発済みの場合でも、`firestore.rules` と同期を取ってくれる。
+既にブラウザコンソールでRulesを開発済みの場合でも、ローカルの `firestore.rules` と同期を取ってくれる。
 
 その後の設問はデフォルト値でOK。
 > ? Which port do you want to use for the functions emulator? 5001
@@ -74,21 +74,27 @@ Jestのデフォルトでは `*.test.js`、 `*.spec.js`、もしくは`__tests__
   "test": "jest"
 },
 ```
-### Jest基本的なAPI
+### Jestの基本的なAPI
 最初のテストを書くうえで必要なところだけ抑えておく。
 （分かりやすい様にTypeScriptの記法でシグネチャを記載するが、後述のサンプルコードはJSで実装する）
+
 - **describe(name:string, fn:Function)**
 テストの見出しのようなもの。機能単位やテストの性質単位、Firestoreだとコレクション単位等で分類分けする際に用いる。
 基本的には`fn`の中にテストを記載していくこととなる。後述するテストサイクルのスコープも担う。
+
 - **test(name:string, fn:Function, timeout:number?)**
 テストを実行する際に用いる関数。`fn`の返却値からテストの成否を判定する。
 `it`という、`test`と全く同じ機能の関数も存在する（他テストフレームワークでは`it`という命名が多用されていることへの配慮）
+
 - **beforeAll(fn:string, timeout:number?)**
 テスト開始直後に1回だけ呼ばれる。`describe`を用いてスコープを切ることが可能。
+
 - **beforeEach(fn:string, timeout:number?)**
 `test`開始前に毎回呼ばれる。
+
 - **afterAll(fn:string, timeout:number?)**
 テスト終了前に1回だけ呼ばれる。`describe`を用いてスコープを切ることが可能。
+
 - **afterEach(fn:string, timeout:number?)**
 `test`終了後に毎回呼ばれる。
 
@@ -123,7 +129,7 @@ Jestのデフォルトでは `*.test.js`、 `*.spec.js`、もしくは`__tests__
 >```
 
 :::message
-Jestではテストの評価をする際 `expect`というメソッドを用いるが、今回そこはFirebase SDKにて行うので使用しない。
+通常、Jestではテストの評価をする際 `expect`というメソッドを用いるが、今回はその機能をFirebase SDKで代用する形となる。
 :::
 
 # テストの作成
@@ -167,6 +173,16 @@ beforeAll(async () => {
 })
 ```
 
+## 環境変数の設定(任意)
+環境変数 `FIRESTORE_EMULATOR_HOST`に、エミュレーターのホスト名:ポート番号を指定する。今回の様にデフォルトポートで立ち上げた場合は不要だが、「デフォルトポートを使うよ」という旨のワーニングが毎回出る。
+> Warning: FIRESTORE_EMULATOR_HOST not set, using default value localhost:8080
+
+煩わしいので、コードで環境変数の設定をしておく。
+```js
+// エミュレーターホスト指定
+process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080'
+```
+
 ## カバレッジレポートの出力(任意)
 Firebaseのテストユーティリティにはカバレッジレポートの出力機能が存在する。
 テスト実行後にエミュレータをブラウザで確認すれば表示されるが、実行の都度ローカルへ保存するようにする。`afterAll`にて行う。
@@ -175,8 +191,7 @@ Firebaseのテストユーティリティにはカバレッジレポートの出
 const http = require('http')
 
 // カバレッジレポート出力URL
-const FIRESTORE_EMULATOR_HOST = 'localhost:8080'
-const COVERAGE_URL = `http://${FIRESTORE_EMULATOR_HOST}/emulator/v1/projects/${PROJECT_ID}:ruleCoverage.html`
+const COVERAGE_URL = `http://${process.env.FIRESTORE_EMULATOR_HOST}/emulator/v1/projects/${PROJECT_ID}:ruleCoverage.html`
 
 // テスト終了前に1回だけ実行される
 afterAll(async () => {
@@ -193,33 +208,17 @@ afterAll(async () => {
 })
 ```
 
-## 環境変数の設定(任意)
-環境変数 `FIRESTORE_EMULATOR_HOST`に、エミュレーターのホスト名:ポート番号を指定する。今回の様にデフォルトポートで立ち上げた場合は不要だが、「デフォルトポートを使うよ」という旨のワーニングが毎回出る。
-> Warning: FIRESTORE_EMULATOR_HOST not set, using default value localhost:8080
-
-煩わしいので、環境変数の設定をしておく。
-```js
-process.env.FIRESTORE_EMULATOR_HOST = FIRESTORE_EMULATOR_HOST
-```
-
 ## Firestoreの初期化/削除
 Firestoreの初期化は`initializeTestApp()`を使う。オプションとして認証情報を渡せば、認証済みユーザーとして初期化されたアプリ情報が返却される。
 これはテストの都度用いる事になるのでグローバル関数として登録しておくと便利。
 ```js
 // Firestoreの初期化
 function getAuthedFirestore(auth) {
-  const db = firebase
-    .initializeTestApp({ projectId: PROJECT_ID, auth })
-    .firestore()
-  db.settings({
-    host: FIRESTORE_EMULATOR_HOST,
-    ssl: false,
-  })
-  return db
+  return firebase.initializeTestApp({ projectId: PROJECT_ID, auth }).firestore()
 }
 ```
-`getAuthedFirestore({uid: 'alice'})` の様に呼び出せばUIDが`alice`の認証済みユーザーとしてfirestoreオブジェクトを使うことができる。
-認証していないユーザーとしてテストしたい場合は引数に`null`を渡す。
+`getAuthedFirestore({uid: 'alice'})` の様に呼び出せば、UIDが`alice`の認証済みユーザーとしてfirestoreオブジェクトを使うことができる。
+認証されてないユーザーとしてテストを行いたい場合は引数に`null`を渡す。
 
 この情報はエミュレーターのメモリ上に残り続ける為、テストの再実行性を考慮して最後には必ずアプリ情報を削除するようにする。
 ```js
@@ -244,22 +243,17 @@ const http = require('http')
 const firebase = require('@firebase/rules-unit-testing')
 
 // FirebaseのProject ID
-const PROJECT_ID = 'painter-werewolf'
+const PROJECT_ID = 'my-project'
+
+// エミュレーターホスト指定
+process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080'
 
 // カバレッジレポート出力URL
-const FIRESTORE_EMULATOR_HOST = 'localhost:8080'
-const COVERAGE_URL = `http://${FIRESTORE_EMULATOR_HOST}/emulator/v1/projects/${PROJECT_ID}:ruleCoverage.html`
+const COVERAGE_URL = `http://${process.env.FIRESTORE_EMULATOR_HOST}/emulator/v1/projects/${PROJECT_ID}:ruleCoverage.html`
 
 // Firestoreの初期化
 function getAuthedFirestore(auth) {
-  const db = firebase
-    .initializeTestApp({ projectId: PROJECT_ID, auth })
-    .firestore()
-  db.settings({
-    host: FIRESTORE_EMULATOR_HOST,
-    ssl: false,
-  })
-  return db
+  return firebase.initializeTestApp({ projectId: PROJECT_ID, auth }).firestore()
 }
 
 // テスト開始時に1回だけ実行される
@@ -300,7 +294,7 @@ describe('最初のテスト', () => {
   })
 })
 ```
-毎回ゼロスタートにしておかないと、他テストで投入された予期せぬデータが邪魔をすることがある。グローバル登録しても良いがテストケースによってはデータを引き継ぎたい場合も出てくるのでスコープ内で定義した方が無難な処理。
+毎回ゼロスタートにしておかないと、他テストで投入された予期せぬデータが邪魔をすることがある。グローバル登録しても良いが、テストケースによってはデータを引き継ぎたい場合も出てくるのでスコープ内で定義した方が無難な処理。
 
 続いて「自身のUIDとドキュメントIDが一致する場合、登録できること」のテストを書く。`test`関数の中でFirebase SDKのテストユーティリティを叩く実装となる。
 `firebase.assertSucceeds()`で成功、`firebase.assertFails()`で失敗した場合にテスト合格としてPromiseが返却される。
@@ -327,12 +321,17 @@ describe('最初のテスト', () => {
 ## テストを実行してみる
 ここまで出来たらエミュレーターを起動したまま、別窓で`yarn test`を実行する。
 テストに成功すると下記が出力される。
-![Jest成功ターミナル画面](https://storage.googleapis.com/zenn-user-upload/jqsy59hisf2ldtiei12l8vthw860)
+![Jest成功ターミナル画面](https://storage.googleapis.com/zenn-user-upload/jqsy59hisf2ldtiei12l8vthw860 =450x)
+
+ローカルの `firestore-coverage.html` もしくは [http://localhost:8080/emulator/v1/projects/my-project:ruleCoverage.html](http://localhost:8080/emulator/v1/projects/my-project:ruleCoverage.html) にアクセスするとカバレッジレポートを確認できる。
+![カバレッジレポート](https://storage.googleapis.com/zenn-user-upload/lybtgemmrlhshyz64vxdbk1j4gje =450x)
+確認したいルールにhoverすると、通過した頻度とルールから返却された値が表示される。
 
 ## テストパターンを網羅する
 今回のRulesだと、usersコレクションに対して
-`get` `list` `create` `delete` の4パターン × 認証済みユーザー、認証されてないユーザー の2パターン
- `update` で ユーザーID一致、不一致の2パターン
+- `get` `list` `create` `delete` の4パターン × 認証済みユーザー、認証されてないユーザー の2パターン
+- `update` で ユーザーID一致、不一致の2パターン
+
 で、計10パターンのテストを用意する。
 読み取り許可してるのは `read`(getとlistの糖衣構文)なので、どちらか片方で良い気もするが、後々ルールを変更した時を考えると出来るだけ細分化して書いた方がベター。
 
@@ -347,7 +346,7 @@ const http = require('http')
 const firebase = require('@firebase/rules-unit-testing')
 
 // FirebaseのProject ID
-const PROJECT_ID = 'painter-werewolf'
+const PROJECT_ID = 'my-project'
 
 // カバレッジレポート出力URL
 const FIRESTORE_EMULATOR_HOST = 'localhost:8080'
@@ -503,11 +502,11 @@ describe('最初のテスト', () => {
 ```
 :::
 
-一部( `UPDATE - Unmatch UserID`等 )、違うユーザーのアプリ情報を用意してデータを登録 → テスト用のアプリ情報を用意してテスト という回りくどい書き方をしているが、ここはFirebase Admin SDKを用いればもっと簡潔に書ける(今回は触れない)
+一部( `UPDATE - Unmatch UserID`等 )、違うユーザーのアプリ情報を用意してデータ登録 → テスト用のアプリ情報を用意してテスト という回りくどい書き方をしているが、ここはFirebase Admin SDKを用いればもっと簡潔に書ける(今回は触れない)
 
 # 本題
 前置きが長くなってしまったが、ここからが本題。
-上記テストコードを実行するとエラーが発生する。
+上記テストコードを実行すると以下のエラーが発生する。
 > @firebase/firestore: Firestore (7.21.1): FIRESTORE (7.21.1) INTERNAL ASSERTION FAILED: Unexpected state
 
 これはissueが立てられており、既にClose済み。
@@ -555,12 +554,12 @@ module.exports = MyEnvironment
   },
 ```
 これで正常にテストがパスされるはず。
-![テストオールグリーン](https://storage.googleapis.com/zenn-user-upload/6c9i9rxl79qzdue6fb0jxnpuywqj)
+![テストオールグリーン](https://storage.googleapis.com/zenn-user-upload/6c9i9rxl79qzdue6fb0jxnpuywqj =450x)
 
 とはいえ、バグ回避の為だけのモジュールを置いておくのは気持ちが悪い。
-[公式サンプル](https://github.com/firebase/quickstart-testing/tree/master/unit-test-security-rules)では[Mocha](https://mochajs.org/)を採用している。大人しくこっち使った方が良さそう。
+[公式のクイックスタート](https://github.com/firebase/quickstart-testing/tree/master/unit-test-security-rules)では[Mocha](https://mochajs.org/)を採用している。大人しくこっち使った方が良さそう。
 
 # おわり
 業務で扱う場合はもちろん、「個人開発だからテストは書かない」という人もRulesのテストだけはちゃんと書いた方がいいです。隙を見せるとすぐゴミデータを投入されますし、何よりRulesの開発はテスト環境が無いと辛いです。[debug関数](https://firebase.google.com/docs/reference/rules/rules.debug)使えないですし。むしろTDDでやった方が開発効率が上がります。
-Jestはやめた方が良いと結論づけましたが、既に導入済みであれば無理して別フレームワークを導入する必要もないと思います。
+あと、Jestはやめた方が良いと結論づけましたが、既に導入済みであれば無理して別フレームワークを導入する必要もないと思います。
 Firestoreはいいぞ。
