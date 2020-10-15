@@ -8,6 +8,8 @@ published: true
 # 結論
 Jest使うのはやめた方が良さそう(拘りが無い限り)
 
+**2020/10/15 追記:** そうでもなさそう。「本題」の章に追記有り。
+
 という残念な結果に至ったが、Firestore Rulesにおけるテストの始め方を記していく。恐らく他のJSテストフレームワークでも大差は無い。
 初学者向けの説明記事となるので興味無い方は「本題」の章に飛んで頂きたい。
 
@@ -517,6 +519,19 @@ describe('最初のテスト', () => {
 [ArrayBuffer regression in node env](https://github.com/facebook/jest/issues/7780)
 
 ## 対策
+
+_**2020/10/15 追記**_ ==========
+[こちらのコメント](https://zenn.dev/kinmi/articles/firestore-rules-jest#comment-ed91ba519dfe887b91f3)にて頂いた対策で回避出来ました！
+当記事の流れでは `jest.config.js` を作っていないので、代わりに `package.json` へ以下を追記するだけでも回避可能です。
+```json
+"jest": {
+  "testEnvironment": "node"
+},
+```
+この程度で回避できるならJestの恩恵とトレードオフする必要は無さそう（手の平クルクル）
+
+========== _追記ここまで_ ==========
+
 上記Firebaseのissueにて中の人が教示してくれているが、下記の対応をすれば回避できる。
 - `yarn add --dev jest-environment-node` を実行
 - `__test-utils__/custom-jest-environment.js` を作成し、下記を実装する
